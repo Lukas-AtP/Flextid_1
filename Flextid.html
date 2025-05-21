@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="da">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Flekstid Tracker</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      padding: 2rem;
+      background-color: #f9f9f9;
+    }
+    h1 {
+      text-align: center;
+    }
+    form {
+      display: grid;
+      gap: 1rem;
+      max-width: 400px;
+      margin: auto;
+    }
+    input[type="time"], input[type="date"] {
+      width: 100%;
+    }
+    button {
+      padding: 0.5rem;
+      background-color: #007bff;
+      color: white;
+      border: none;
+      cursor: pointer;
+    }
+    button:hover {
+      background-color: #0056b3;
+    }
+    .summary {
+      margin-top: 2rem;
+      font-size: 1.2rem;
+      text-align: center;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 1rem;
+    }
+    th, td {
+      border: 1px solid #ccc;
+      padding: 0.5rem;
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+  <h1>Flekstid Tracker</h1>
+
+  <form id="entryForm">
+    <label>Dato:
+      <input type="date" id="date" required>
+    </label>
+    <label>Mødt kl.:
+      <input type="time" id="start" required>
+    </label>
+    <label>Gået kl.:
+      <input type="time" id="end" required>
+    </label>
+    <button type="submit">Tilføj</button>
+  </form>
+
+  <div class="summary">
+    Samlet afvigelse: <span id="total">0 minutter</span>
+  </div>
+
+  <table>
+    <thead>
+      <tr>
+        <th>Dato</th>
+        <th>Forventet</th>
+        <th>Faktisk</th>
+        <th>Afvigelse</th>
+      </tr>
+    </thead>
+    <tbody id="log"></tbody>
+  </table>
+
+  <script>
+    const form = document.getElementById('entryForm');
+    const log = document.getElementById('log');
+    const totalDisplay = document.getElementById('total');
+
+    const DEFAULT_EXPECTED = 562; // 9 timer og 22 minutter i minutter
+
+    let entries = JSON.parse(localStorage.getItem('flextidEntries') || '[]');
+
+    function timeToMinutes(t) {
+      const [h, m] = t.split(":").map(Number);
+      return h * 60 + m;
+    }
+
+    function minutesToTimeString(m) {
+      const sign = m < 0 ? "-" : "";
+      const abs = Math.abs(m);
+      const h = Math.floor(abs / 60);
+      const min = abs % 60;
+      return `${sign}${h}t ${min}min`;
+    }
+
+    function updateTable() {
+      log.innerHTML = "";
+      let totalMinutes = 0;
+      entries.forEach(entry => {
+        const actual = entry.end - entry.start;
+        const diff = actual - DEFAULT_EXPECTED;
+        totalMinutes += diff;
+
+        const row = document.createElement('tr');
+        row.innerHTML = `
+          <td>${entry.date}</td>
+          <td>9t 22min</td>
+          <td>${minutesToTimeString(actual)}</td>
+          <td>${minutesToTimeString(diff)}</td>
+        `;
+        log.appendChild(row);
+      });
+      totalDisplay.textContent = minutesToTimeString(totalMinutes);
+    }
+
+    form.addEventListener('submit', (e) => {
+      e.preventDefault();
+      const date = document.getElementById('date').value;
+      const start = timeToMinutes(document.getElementById('start').value);
+      const end = timeToMinutes(document.getElementById('end').value);
+
+      entries.push({ date, start, end });
+      localStorage.setItem('flextidEntries', JSON.stringify(entries));
+      updateTable();
+      form.reset();
+    });
+
+    updateTable();
+  </script>
+</body>
+</html>
